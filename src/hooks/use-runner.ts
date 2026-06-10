@@ -1,0 +1,252 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
+import { buildSteps, planTotalSeconds, type RunnerStep } from "@/lib/runner/plan";
+import { speak, stopSpeaking, warmUpSpeech } from "@/lib/speech";
+import type { WorkoutWithExercises } from "@/types";
+
+type Status = "idle" | "running" | "paused" | "finished";
+
+interface State {
+  steps: RunnerStep[];
+  stepIndex: number;
+  /** Milliseconds remaining for the current time-step. */
+  remainingMs: number;
+  status: Status;
+  /** ms of elapsed run-time (not wall-clock), used for the session log. */
+  elapsedMs: number;
+  startedAt: string | null;
+  cuesFiredForStep: { halfway: boolean; tenSec: boolean };
+}
+
+type Action =
+  | { type: "START"; now: number }
+  | { type: "PAUSE" }
+  | { type: "RESUME" }
+  | { type: "TICK"; delta: number }
+  | { type: "ADVANCE" }
+  | { type: "PREV" }
+  | { type: "FIRE_CUE"; cue: "halfway" | "tenSec" }
+  | { type: "FINISH" };
+
+function freshStepState(steps: RunnerStep[], stepIndex: number) {
+  const step = steps[stepIndex];
+  return {
+    stepIndex,
+    remainingMs: step.mode === "time" ? step.durationSec * 1000 : 0,
+    cuesFiredForStep: { halfway: false, tenSec: false },
+  };
+}
+
+function reducer(state: State, action: Action): State {
+  switch (action.type) {
+    case "START": {
+      if (state.steps.length === 0) return state;
+      return {
+        ...state,
+        status: "running",
+        startedAt: new Date(action.now).toISOString(),
+        elapsedMs: 0,
+        ...freshStepState(state.steps, 0),
+      };
+    }
+    case "PAUSE":
+      return state.status === "running" ? { ...state, status: "paused" } : state;
+    case "RESUME":
+      return state.status === "paused" ? { ...state, status: "running" } : state;
+    case "TICK": {
+      if (state.status !== "running") return state;
+      const elapsedMs = state.elapsedMs + action.delta;
+      const step = state.steps[state.stepIndex];
+      if (step.mode !== "time") return { ...state, elapsedMs };
+      const remainingMs = Math.max(0, state.remainingMs - action.delta);
+      return { ...state, elapsedMs, remainingMs };
+    }
+    case "ADVANCE": {
+      const nextIndex = state.stepIndex + 1;
+      if (nextIndex >= state.steps.length) {
+        return { ...state, status: "finished" };
+      }
+      return { ...state, ...freshStepState(state.steps, nextIndex) };
+    }
+    case "PREV": {
+      const prevIndex = Math.max(0, state.stepIndex - 1);
+      return { ...state, ...freshStepState(state.steps, prevIndex), status: "running" };
+    }
+    case "FIRE_CUE":
+      return {
+        ...state,
+        cuesFiredForStep: { ...state.cuesFiredForStep, [action.cue]: true },
+      };
+    case "FINISH":
+      return { ...state, status: "finished" };
+    default:
+      return state;
+  }
+}
+
+export interface RunnerApi {
+  status: Status;
+  step: RunnerStep | null;
+  stepIndex: number;
+  stepCount: number;
+  remainingSec: number;
+  /** Progress 0..1 within the current step. */
+  stepProgress: number;
+  /** Progress 0..1 across the whole workout (by step index). */
+  workoutProgress: number;
+  elapsedSec: number;
+  startedAt: string | null;
+  totalPlanSec: number;
+  isFinished: boolean;
+
+  start: () => void;
+  pause: () => void;
+  resume: () => void;
+  advance: () => void;
+  prev: () => void;
+  completeReps: () => void;
+}
+
+export function useRunner(workout: WorkoutWithExercises): RunnerApi {
+  const steps = useMemo(() => buildSteps(workout), [workout]);
+  const totalPlanSec = useMemo(() => planTotalSeconds(steps), [steps]);
+
+  const [state, dispatch] = useReducer(reducer, undefined as unknown, () => ({
+    steps,
+    stepIndex: 0,
+    remainingMs: steps[0]?.mode === "time" ? steps[0].durationSec * 1000 : 0,
+    status: "idle" as Status,
+    elapsedMs: 0,
+    startedAt: null,
+    cuesFiredForStep: { halfway: false, tenSec: false },
+  }));
+
+  // Tick loop using rAF + performance.now for accuracy and battery-friendliness.
+  const rafRef = useRef<number | null>(null);
+  const lastTickRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (state.status !== "running") {
+      lastTickRef.current = null;
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+      return;
+    }
+
+    function frame(now: number) {
+      const last = lastTickRef.current ?? now;
+      const delta = now - last;
+      lastTickRef.current = now;
+      dispatch({ type: "TICK", delta });
+      rafRef.current = requestAnimationFrame(frame);
+    }
+    rafRef.current = requestAnimationFrame(frame);
+
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    };
+  }, [state.status]);
+
+  // Auto-advance timed steps when they hit zero.
+  useEffect(() => {
+    if (state.status !== "running") return;
+    const step = state.steps[state.stepIndex];
+    if (!step || step.mode !== "time") return;
+    if (state.remainingMs <= 0) {
+      dispatch({ type: "ADVANCE" });
+    }
+  }, [state.remainingMs, state.status, state.stepIndex, state.steps]);
+
+  // Voice cues at halfway and 10s remaining on timed steps.
+  useEffect(() => {
+    if (state.status !== "running") return;
+    const step = state.steps[state.stepIndex];
+    if (!step || step.mode !== "time") return;
+
+    const remSec = state.remainingMs / 1000;
+    const dur = step.durationSec;
+
+    // 10-second cue: only meaningful when there's more than 10s of work.
+    if (
+      workout.cue_10s &&
+      !state.cuesFiredForStep.tenSec &&
+      dur > 10 &&
+      remSec <= 10 &&
+      remSec > 0 &&
+      (step.kind === "exercise" || step.kind === "rest")
+    ) {
+      speak("Ten seconds left");
+      dispatch({ type: "FIRE_CUE", cue: "tenSec" });
+      return;
+    }
+
+    // Halfway cue: only meaningful for longer timed exercises.
+    if (
+      workout.cue_halfway &&
+      !state.cuesFiredForStep.halfway &&
+      step.kind === "exercise" &&
+      dur >= 20 &&
+      remSec <= dur / 2 &&
+      remSec > 10 // don't speak halfway right before the 10s cue
+    ) {
+      speak("Halfway");
+      dispatch({ type: "FIRE_CUE", cue: "halfway" });
+    }
+  }, [
+    state.remainingMs,
+    state.status,
+    state.stepIndex,
+    state.steps,
+    state.cuesFiredForStep.halfway,
+    state.cuesFiredForStep.tenSec,
+    workout.cue_halfway,
+    workout.cue_10s,
+  ]);
+
+  // Stop speech when the workout finishes.
+  useEffect(() => {
+    if (state.status === "finished") stopSpeaking();
+  }, [state.status]);
+
+  // Public API
+  const start = useCallback(() => {
+    warmUpSpeech();
+    dispatch({ type: "START", now: Date.now() });
+  }, []);
+  const pause = useCallback(() => dispatch({ type: "PAUSE" }), []);
+  const resume = useCallback(() => dispatch({ type: "RESUME" }), []);
+  const advance = useCallback(() => dispatch({ type: "ADVANCE" }), []);
+  const prev = useCallback(() => dispatch({ type: "PREV" }), []);
+  const completeReps = useCallback(() => dispatch({ type: "ADVANCE" }), []);
+
+  const step = state.steps[state.stepIndex] ?? null;
+  const remainingSec = step && step.mode === "time" ? Math.ceil(state.remainingMs / 1000) : 0;
+  const stepProgress =
+    step && step.mode === "time" && step.durationSec > 0
+      ? 1 - state.remainingMs / (step.durationSec * 1000)
+      : 0;
+  const workoutProgress =
+    state.steps.length > 0 ? state.stepIndex / state.steps.length : 0;
+
+  return {
+    status: state.status,
+    step,
+    stepIndex: state.stepIndex,
+    stepCount: state.steps.length,
+    remainingSec,
+    stepProgress: Math.min(1, Math.max(0, stepProgress)),
+    workoutProgress: Math.min(1, Math.max(0, workoutProgress)),
+    elapsedSec: Math.floor(state.elapsedMs / 1000),
+    startedAt: state.startedAt,
+    totalPlanSec,
+    isFinished: state.status === "finished",
+    start,
+    pause,
+    resume,
+    advance,
+    prev,
+    completeReps,
+  };
+}
