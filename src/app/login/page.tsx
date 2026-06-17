@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Dumbbell } from "lucide-react";
 import { toast } from "sonner";
@@ -34,6 +34,16 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [magicSent, setMagicSent] = useState(false);
 
+  useEffect(() => {
+    const saved = localStorage.getItem("remembered_email");
+    if (saved) {
+      setEmail(saved);
+      setRememberMe(true);
+    } else {
+      setRememberMe(false);
+    }
+  }, []);
+
   const siteUrl =
     process.env.NEXT_PUBLIC_SITE_URL ??
     (typeof window !== "undefined" ? window.location.origin : "");
@@ -50,6 +60,11 @@ export default function LoginPage() {
           password,
         });
         if (error) throw error;
+        if (rememberMe) {
+          localStorage.setItem("remembered_email", email);
+        } else {
+          localStorage.removeItem("remembered_email");
+        }
         router.push("/");
         router.refresh();
       } else {

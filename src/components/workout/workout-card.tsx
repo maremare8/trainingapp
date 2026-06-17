@@ -10,7 +10,6 @@ import {
   MoreVertical,
   Clock,
   Repeat,
-  ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { WorkoutWithExercises } from "@/types";
@@ -70,16 +69,16 @@ export function WorkoutListItem({ workout }: { workout: WorkoutWithExercises }) 
 
   return (
     <>
-      <div className="flex items-center gap-3 py-3">
-        {/* Play button */}
+      <div className="flex items-center gap-3 py-4">
+        {/* Play button - primary */}
         <Button
           render={<Link href={`/workouts/${workout.id}/run`} />}
-          size="icon-sm"
-          variant="secondary"
+          size="icon"
+          variant="default"
           disabled={exerciseCount === 0}
           className="shrink-0"
         >
-          <Play className="size-3.5" />
+          <Play className="size-4" />
         </Button>
 
         {/* Content - tap to edit */}
@@ -103,7 +102,16 @@ export function WorkoutListItem({ workout }: { workout: WorkoutWithExercises }) 
           </span>
         </Link>
 
-        {/* Actions */}
+        {/* Edit button */}
+        <Button
+          render={<Link href={`/workouts/${workout.id}/edit`} />}
+          variant="ghost"
+          size="icon-sm"
+        >
+          <Pencil className="size-4" />
+        </Button>
+
+        {/* More actions */}
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
@@ -128,10 +136,6 @@ export function WorkoutListItem({ workout }: { workout: WorkoutWithExercises }) 
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-
-        <Link href={`/workouts/${workout.id}/edit`} className="text-muted-foreground shrink-0">
-          <ChevronRight className="size-4" />
-        </Link>
       </div>
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>

@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { ExerciseInput, WorkoutInput, SessionStatus } from "@/types";
 
@@ -43,7 +42,7 @@ export async function createWorkout(
   }
 
   revalidatePath("/");
-  redirect(`/workouts/${created.id}/edit?created=1`);
+  return created.id;
 }
 
 export async function updateWorkout(

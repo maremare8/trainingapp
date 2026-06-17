@@ -10,6 +10,8 @@ import {
   X,
   Check,
   Trophy,
+  Volume2,
+  VolumeOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -138,6 +140,17 @@ export function Runner({
     <RunnerScreen
       onClose={() => setConfirmAbortOpen(true)}
       tone={isRest ? "rest" : "work"}
+      topLeft={
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={runner.toggleMute}
+          className="text-white hover:bg-white/10 hover:text-white"
+          aria-label={runner.isMuted ? "Unmute" : "Mute"}
+        >
+          {runner.isMuted ? <VolumeOff className="size-5" /> : <Volume2 className="size-5" />}
+        </Button>
+      }
     >
       <div className="flex flex-1 flex-col">
         <div className="text-muted-foreground flex items-center justify-between text-xs">
@@ -277,10 +290,12 @@ function RunnerScreen({
   children,
   onClose,
   tone,
+  topLeft,
 }: {
   children: React.ReactNode;
   onClose: () => void;
   tone?: "work" | "rest";
+  topLeft?: React.ReactNode;
 }) {
   return (
     <div
@@ -297,7 +312,8 @@ function RunnerScreen({
         paddingBottom: "max(env(safe-area-inset-bottom), 1rem)",
       }}
     >
-      <div className="flex items-center justify-end px-4">
+      <div className="flex items-center justify-between px-4">
+        <div>{topLeft}</div>
         <Button
           variant="ghost"
           size="icon-sm"

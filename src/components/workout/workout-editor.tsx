@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Save, ArrowLeft } from "lucide-react";
+import { Plus, Save, ArrowLeft, Play } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -158,6 +158,8 @@ export function WorkoutEditor({ workout }: Props) {
     setItems((prev) => prev.filter((i) => i.draftId !== draftId));
   }
 
+  const [runAfterSave, setRunAfterSave] = useState(false);
+
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (items.length === 0) {
@@ -185,14 +187,26 @@ export function WorkoutEditor({ workout }: Props) {
       rest_after_sec: restBetweenExercises,
     }));
 
+    const shouldRun = runAfterSave;
+    setRunAfterSave(false);
+
     startTransition(async () => {
       try {
         if (workout) {
           await updateWorkout(workout.id, payload, exercises);
-          toast.success("Workout saved");
-          router.refresh();
+          if (shouldRun) {
+            router.push(`/workouts/${workout.id}/run`);
+          } else {
+            toast.success("Workout saved");
+            router.push("/");
+          }
         } else {
-          await createWorkout(payload, exercises);
+          const id = await createWorkout(payload, exercises);
+          if (shouldRun) {
+            router.push(`/workouts/${id}/run`);
+          } else {
+            router.push("/");
+          }
         }
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Could not save");
@@ -248,6 +262,7 @@ export function WorkoutEditor({ workout }: Props) {
             value={rounds}
             min={1}
             onChange={setRounds}
+            unit="rounds"
           />
           <Separator />
           <NumberField
@@ -310,7 +325,17 @@ export function WorkoutEditor({ workout }: Props) {
 
       <Button type="submit" disabled={pending} className="mt-2">
         <Save className="size-4" />
-        {pending ? "Saving…" : "Save workout"}
+        {pending && !runAfterSave ? "Saving…" : "Save workout"}
+      </Button>
+
+      <Button
+        type="submit"
+        variant="outline"
+        disabled={pending}
+        onClick={() => setRunAfterSave(true)}
+      >
+        <Play className="size-4" />
+        {pending && runAfterSave ? "Saving…" : "Run workout"}
       </Button>
     </form>
   );
@@ -363,13 +388,10 @@ function NumberField({
             min={min}
             value={Number.isFinite(value) ? value : 0}
             onChange={(e) => onChange(Math.max(min, Number(e.target.value)))}
-            className={cn(
-              "w-20 text-center [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
-              unit && "pr-8"
-            )}
+            className="w-20 text-center pt-1 pb-3 h-10 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
           />
           {unit ? (
-            <span className="text-muted-foreground pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs">
+            <span className="text-muted-foreground pointer-events-none absolute inset-x-0 bottom-1 text-center text-[9px]">
               {unit}
             </span>
           ) : null}

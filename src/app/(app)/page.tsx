@@ -13,7 +13,7 @@ export default async function WorkoutsPage() {
       <PageHeader
         title="Workouts"
         action={
-          <Button render={<Link href="/workouts/new" />} size="sm">
+          <Button render={<Link href="/workouts/new" />} size="sm" variant="secondary">
             <Plus className="size-4" />
             New
           </Button>

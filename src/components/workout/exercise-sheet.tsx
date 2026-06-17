@@ -218,9 +218,9 @@ function NumberRow({
             min={min}
             value={Number.isFinite(value) ? value : 0}
             onChange={(e) => onChange(Math.max(min, Number(e.target.value)))}
-            className="text-center text-base pr-9 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+            className="text-center text-base pt-1 pb-3 h-10 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
           />
-          <span className="text-muted-foreground pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs">
+          <span className="text-muted-foreground pointer-events-none absolute inset-x-0 bottom-1 text-center text-[9px]">
             {unit}
           </span>
         </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { buildSteps, planTotalSeconds, type RunnerStep } from "@/lib/runner/plan";
 import { speak, stopSpeaking, warmUpSpeech } from "@/lib/speech";
 import type { WorkoutWithExercises } from "@/types";
@@ -99,6 +99,7 @@ export interface RunnerApi {
   startedAt: string | null;
   totalPlanSec: number;
   isFinished: boolean;
+  isMuted: boolean;
 
   start: () => void;
   pause: () => void;
@@ -106,6 +107,7 @@ export interface RunnerApi {
   advance: () => void;
   prev: () => void;
   completeReps: () => void;
+  toggleMute: () => void;
 }
 
 export function useRunner(
@@ -124,6 +126,14 @@ export function useRunner(
     startedAt: null,
     cuesFiredForStep: { halfway: false, tenSec: false },
   }));
+
+  const [isMuted, setIsMuted] = useState(false);
+  const mutedRef = useRef(isMuted);
+  mutedRef.current = isMuted;
+
+  const toggleMute = useCallback(() => {
+    setIsMuted((m) => !m);
+  }, []);
 
   // Tick loop using rAF + performance.now for accuracy and battery-friendliness.
   const rafRef = useRef<number | null>(null);
@@ -180,7 +190,7 @@ export function useRunner(
       remSec > 0 &&
       (step.kind === "exercise" || step.kind === "rest")
     ) {
-      speak("Ten seconds left");
+      if (!mutedRef.current) speak("Ten seconds left");
       dispatch({ type: "FIRE_CUE", cue: "tenSec" });
       return;
     }
@@ -194,7 +204,7 @@ export function useRunner(
       remSec <= dur / 2 &&
       remSec > 10 // don't speak halfway right before the 10s cue
     ) {
-      speak("Halfway");
+      if (!mutedRef.current) speak("Halfway");
       dispatch({ type: "FIRE_CUE", cue: "halfway" });
     }
   }, [
@@ -247,11 +257,13 @@ export function useRunner(
     startedAt: state.startedAt,
     totalPlanSec,
     isFinished: state.status === "finished",
+    isMuted,
     start,
     pause,
     resume,
     advance,
     prev,
     completeReps,
+    toggleMute,
   };
 }
