@@ -1,14 +1,15 @@
-// Minimal service worker for the Tabata Timer PWA.
+// Service worker for the Tabata Timer PWA.
 // Strategy:
 //  - Precache the app shell so the installed app can boot offline.
 //  - Network-first for navigations (so fresh content wins when online,
 //    falling back to cache when offline).
-//  - Stale-while-revalidate for Supabase GET requests (lets a saved workout
-//    you've already viewed load again offline).
+//  - Stale-while-revalidate for Supabase GET requests (lets saved workouts
+//    and history load offline after viewing them at least once).
 //  - Cache-first for static assets.
+//  - On message "CACHE_WORKOUTS": proactively fetch and cache all workouts.
 
-const CACHE = "tabata-shell-v1";
-const API_CACHE = "tabata-api-v1";
+const CACHE = "tabata-shell-v2";
+const API_CACHE = "tabata-api-v2";
 const SHELL = ["/", "/history", "/settings", "/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {
@@ -36,6 +37,22 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+// Listen for messages from the app to proactively cache data.
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "CACHE_WORKOUTS") {
+    const { url, headers } = event.data;
+    if (!url) return;
+    const req = new Request(url, { headers });
+    fetch(req)
+      .then((res) => {
+        if (res.ok) {
+          caches.open(API_CACHE).then((cache) => cache.put(req, res));
+        }
+      })
+      .catch(() => {});
+  }
+});
+
 self.addEventListener("fetch", (event) => {
   const { request } = event;
 
@@ -52,13 +69,13 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       caches.open(API_CACHE).then(async (cache) => {
         const cached = await cache.match(request);
-        const network = fetch(request)
+        const networkPromise = fetch(request)
           .then((res) => {
             if (res.ok) cache.put(request, res.clone());
             return res;
           })
           .catch(() => cached);
-        return cached || network;
+        return cached || networkPromise;
       })
     );
     return;

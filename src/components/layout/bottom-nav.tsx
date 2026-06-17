@@ -15,11 +15,11 @@ export function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav
-      className="bg-background/95 supports-[backdrop-filter]:bg-background/80 fixed inset-x-0 bottom-0 z-40 border-t backdrop-blur"
-      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+    <div
+      className="fixed inset-x-0 bottom-0 z-40 flex justify-center"
+      style={{ paddingBottom: "max(12px, env(safe-area-inset-bottom))" }}
     >
-      <div className="mx-auto flex max-w-md items-stretch justify-around">
+      <nav className="mx-4 flex w-full max-w-xs items-stretch justify-around rounded-2xl border border-border bg-background/90 shadow-lg backdrop-blur-xl">
         {items.map(({ href, label, icon: Icon, match }) => {
           const active = match(pathname);
           return (
@@ -27,16 +27,16 @@ export function BottomNav() {
               key={href}
               href={href}
               className={cn(
-                "flex flex-1 flex-col items-center gap-1 pt-3 pb-2 text-xs font-medium transition-colors",
-                active ? "text-primary" : "text-muted-foreground"
+                "flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium transition-colors",
+                active ? "text-foreground" : "text-muted-foreground"
               )}
             >
-              <Icon className="size-5" strokeWidth={active ? 2.5 : 2} />
+              <Icon className="size-5" strokeWidth={active ? 2.5 : 1.5} />
               {label}
             </Link>
           );
         })}
-      </div>
-    </nav>
+      </nav>
+    </div>
   );
 }

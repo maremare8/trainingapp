@@ -168,3 +168,27 @@ export async function deleteSession(id: string) {
   if (error) throw error;
   revalidatePath("/history");
 }
+
+// Profile / streak settings
+
+export async function getStreakGoal(): Promise<number> {
+  const { userId, supabase } = await getUserId();
+  const { data } = await supabase
+    .from("profiles")
+    .select("streak_goal_days")
+    .eq("id", userId)
+    .single();
+  return data?.streak_goal_days ?? 2;
+}
+
+export async function updateStreakGoal(days: number) {
+  if (days < 1 || days > 7) throw new Error("Goal must be 1–7 days");
+  const { userId, supabase } = await getUserId();
+  const { error } = await supabase
+    .from("profiles")
+    .update({ streak_goal_days: days })
+    .eq("id", userId);
+  if (error) throw error;
+  revalidatePath("/settings");
+  revalidatePath("/history");
+}

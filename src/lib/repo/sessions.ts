@@ -7,6 +7,7 @@ export async function listSessions(limit = 50): Promise<WorkoutSession[]> {
   const { data, error } = await supabase
     .from("workout_sessions")
     .select("*")
+    .eq("status", "completed")
     .order("started_at", { ascending: false })
     .limit(limit);
   if (error) throw error;

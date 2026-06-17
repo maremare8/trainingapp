@@ -1,23 +1,34 @@
 import { Flame, Activity, Clock, CalendarDays } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { ActivityGraph } from "@/components/history/activity-graph";
 import { listSessions } from "@/lib/repo/sessions";
 import { computeStats } from "@/lib/history-stats";
+import { getStreakGoal } from "@/app/(app)/actions";
 import { formatDate, formatDuration, formatDurationShort } from "@/lib/format";
 
 export const metadata = { title: "History" };
 
 export default async function HistoryPage() {
-  const sessions = await listSessions();
-  const stats = computeStats(sessions);
+  const [sessions, goalDays] = await Promise.all([listSessions(), getStreakGoal()]);
+  const stats = computeStats(sessions, goalDays);
+
+  // Build activity-by-day map for the graph
+  const activityByDay: Record<string, number> = {};
+  for (const s of sessions) {
+    const d = new Date(s.started_at);
+    const key = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, "0")}-${d.getDate().toString().padStart(2, "0")}`;
+    activityByDay[key] = (activityByDay[key] || 0) + 1;
+  }
 
   return (
     <>
-      <PageHeader
-        title="History"
-        description="Completed sessions and streaks."
-      />
+      <PageHeader title="History" />
+
+      {/* Activity graph */}
+      <div className="mb-5">
+        <ActivityGraph activityByDay={activityByDay} />
+      </div>
 
       <div className="mb-5 grid grid-cols-2 gap-3">
         <StatCard
@@ -38,12 +49,7 @@ export default async function HistoryPage() {
         <StatCard
           icon={<Activity className="size-4" />}
           label="Total"
-          value={`${stats.totalCompleted} done`}
-          sub={
-            stats.totalSessions > stats.totalCompleted
-              ? `+ ${stats.totalSessions - stats.totalCompleted} aborted`
-              : undefined
-          }
+          value={`${stats.totalCompleted} completed`}
         />
         <StatCard
           icon={<Clock className="size-4" />}
@@ -53,28 +59,23 @@ export default async function HistoryPage() {
       </div>
 
       {sessions.length === 0 ? (
-        <Card className="text-muted-foreground px-6 py-12 text-center text-sm">
+        <div className="text-muted-foreground px-6 py-12 text-center text-sm">
           Your completed workouts will show up here.
-        </Card>
+        </div>
       ) : (
-        <div className="flex flex-col gap-2">
+        <div className="divide-border divide-y">
           {sessions.map((s) => (
-            <Card key={s.id}>
-              <CardContent className="flex items-center justify-between gap-3 py-3">
-                <div className="min-w-0">
-                  <div className="truncate font-medium">{s.workout_name}</div>
-                  <div className="text-muted-foreground text-xs">
-                    {formatDate(s.started_at)} · {formatDuration(s.total_duration_sec)}
-                    {s.rounds_completed > 0
-                      ? ` · ${s.rounds_completed} ${s.rounds_completed === 1 ? "round" : "rounds"}`
-                      : ""}
-                  </div>
+            <div key={s.id} className="flex items-center justify-between gap-3 py-3">
+              <div className="min-w-0">
+                <div className="truncate font-medium">{s.workout_name}</div>
+                <div className="text-muted-foreground text-xs">
+                  {formatDate(s.started_at)} · {formatDuration(s.total_duration_sec)}
+                  {s.rounds_completed > 0
+                    ? ` · ${s.rounds_completed} ${s.rounds_completed === 1 ? "round" : "rounds"}`
+                    : ""}
                 </div>
-                {s.status === "aborted" ? (
-                  <Badge variant="outline">Aborted</Badge>
-                ) : null}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           ))}
         </div>
       )}

@@ -210,6 +210,7 @@ export function WorkoutEditor({ workout }: Props) {
             value={restBetween}
             min={0}
             unit="sec"
+            step={5}
             onChange={setRestBetween}
           />
         </CardContent>
@@ -287,6 +288,7 @@ function NumberField({
   unit,
   onChange,
   hint,
+  step = 1,
 }: {
   id: string;
   label: string;
@@ -295,6 +297,7 @@ function NumberField({
   unit?: string;
   onChange: (n: number) => void;
   hint?: string;
+  step?: number;
 }) {
   return (
     <div className="flex items-center justify-between gap-3">
@@ -311,7 +314,7 @@ function NumberField({
           type="button"
           variant="outline"
           size="icon-sm"
-          onClick={() => onChange(Math.max(min, value - 1))}
+          onClick={() => onChange(Math.max(min, value - step))}
           aria-label={`Decrease ${label}`}
         >
           −
@@ -323,13 +326,13 @@ function NumberField({
           min={min}
           value={Number.isFinite(value) ? value : 0}
           onChange={(e) => onChange(Math.max(min, Number(e.target.value)))}
-          className="w-16 text-center"
+          className="w-16 text-center [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
         />
         <Button
           type="button"
           variant="outline"
           size="icon-sm"
-          onClick={() => onChange(value + 1)}
+          onClick={() => onChange(value + step)}
           aria-label={`Increase ${label}`}
         >
           +

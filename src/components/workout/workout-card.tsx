@@ -10,6 +10,7 @@ import {
   MoreVertical,
   Clock,
   Repeat,
+  ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { WorkoutWithExercises } from "@/types";
@@ -18,7 +19,6 @@ import {
   duplicateWorkout,
 } from "@/app/(app)/actions";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,7 +39,7 @@ import {
 import { estimateWorkoutDuration } from "@/lib/workout-stats";
 import { formatDurationShort } from "@/lib/format";
 
-export function WorkoutCard({ workout }: { workout: WorkoutWithExercises }) {
+export function WorkoutListItem({ workout }: { workout: WorkoutWithExercises }) {
   const [pending, startTransition] = useTransition();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const exerciseCount = workout.exercises.length;
@@ -69,39 +69,41 @@ export function WorkoutCard({ workout }: { workout: WorkoutWithExercises }) {
   }
 
   return (
-    <Card className="overflow-hidden">
-      <div className="flex items-center gap-3 px-4 py-3">
-        <div className="min-w-0 flex-1">
-          <Link
-            href={`/workouts/${workout.id}/edit`}
-            className="block truncate text-base font-semibold"
-          >
-            {workout.name}
-          </Link>
-          <div className="text-muted-foreground mt-1 flex items-center gap-3 text-xs">
+    <>
+      <div className="flex items-center gap-3 py-3">
+        {/* Play button */}
+        <Button
+          render={<Link href={`/workouts/${workout.id}/run`} />}
+          size="icon-sm"
+          variant="secondary"
+          disabled={exerciseCount === 0}
+          className="shrink-0"
+        >
+          <Play className="size-3.5" />
+        </Button>
+
+        {/* Content - tap to edit */}
+        <Link
+          href={`/workouts/${workout.id}/edit`}
+          className="flex min-w-0 flex-1 flex-col"
+        >
+          <span className="truncate font-medium">{workout.name}</span>
+          <span className="text-muted-foreground flex items-center gap-2 text-xs">
             <span>{exerciseCount} {exerciseCount === 1 ? "exercise" : "exercises"}</span>
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-0.5">
               <Clock className="size-3" />
               {formatDurationShort(totalSec)}
             </span>
             {workout.rounds > 1 ? (
-              <span className="flex items-center gap-1">
+              <span className="flex items-center gap-0.5">
                 <Repeat className="size-3" />
                 {workout.rounds}
               </span>
             ) : null}
-          </div>
-        </div>
+          </span>
+        </Link>
 
-        <Button
-          render={<Link href={`/workouts/${workout.id}/run`} />}
-          size="sm"
-          disabled={exerciseCount === 0}
-        >
-          <Play className="size-3.5" />
-          Run
-        </Button>
-
+        {/* Actions */}
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
@@ -126,6 +128,10 @@ export function WorkoutCard({ workout }: { workout: WorkoutWithExercises }) {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        <Link href={`/workouts/${workout.id}/edit`} className="text-muted-foreground shrink-0">
+          <ChevronRight className="size-4" />
+        </Link>
       </div>
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
@@ -148,6 +154,6 @@ export function WorkoutCard({ workout }: { workout: WorkoutWithExercises }) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </Card>
+    </>
   );
 }

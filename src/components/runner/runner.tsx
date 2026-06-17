@@ -68,17 +68,6 @@ export function Runner({ workout }: { workout: WorkoutWithExercises }) {
 
   function abort() {
     setConfirmAbortOpen(false);
-    if (runner.startedAt && runner.status !== "idle") {
-      const currentRound = runner.step?.round ?? 1;
-      logSession({
-        workout_id: workout.id,
-        workout_name: workout.name,
-        started_at: runner.startedAt,
-        total_duration_sec: runner.elapsedSec,
-        rounds_completed: Math.max(0, currentRound - 1),
-        status: "aborted",
-      }).catch(() => undefined);
-    }
     stopSpeaking();
     router.replace("/");
   }
@@ -238,7 +227,7 @@ export function Runner({ workout }: { workout: WorkoutWithExercises }) {
           <AlertDialogHeader>
             <AlertDialogTitle>End this workout?</AlertDialogTitle>
             <AlertDialogDescription>
-              Your progress will be logged as aborted.
+              Your progress will not be saved.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

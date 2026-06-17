@@ -229,7 +229,7 @@ function NumberRow({
           min={min}
           value={Number.isFinite(value) ? value : 0}
           onChange={(e) => onChange(Math.max(min, Number(e.target.value)))}
-          className="text-center text-base"
+          className="text-center text-base [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
         />
         <Button
           type="button"

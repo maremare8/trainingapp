@@ -122,7 +122,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="mx-auto flex min-h-[100svh] max-w-md flex-col px-6 pt-16 pb-[max(2rem,env(safe-area-inset-bottom))]">
+    <div className="mx-auto flex min-h-[100svh] max-w-md flex-col px-6 pt-[max(4rem,env(safe-area-inset-top))] pb-[max(2rem,env(safe-area-inset-bottom))]">
       <div className="mb-8 flex flex-col items-center gap-3 text-center">
         <div className="bg-primary text-primary-foreground flex size-14 items-center justify-center rounded-2xl">
           <Dumbbell className="size-7" />

@@ -8,6 +8,7 @@ export type SessionStatus = "completed" | "aborted";
 export interface Profile {
   id: string;
   display_name: string | null;
+  streak_goal_days: number;
   created_at: string;
 }
 
