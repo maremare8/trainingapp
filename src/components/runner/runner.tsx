@@ -30,15 +30,19 @@ import { useWakeLock } from "@/hooks/use-wake-lock";
 import { logSession } from "@/app/(app)/actions";
 import { formatDuration } from "@/lib/format";
 import { stopSpeaking } from "@/lib/speech";
+import { estimateCalories } from "@/lib/calories";
+import { splitWorkRestTime } from "@/lib/workout-stats";
 import { cn } from "@/lib/utils";
 import type { WorkoutWithExercises } from "@/types";
 
 export function Runner({
   workout,
   cueSettings,
+  bodyStats,
 }: {
   workout: WorkoutWithExercises;
   cueSettings?: { cue_halfway: boolean; cue_10s: boolean };
+  bodyStats?: { weight_kg: number | null; sex: "male" | "female" | null };
 }) {
   const router = useRouter();
   const runner = useRunner(workout, cueSettings);
@@ -47,11 +51,36 @@ export function Runner({
   const [confirmAbortOpen, setConfirmAbortOpen] = useState(false);
   const loggedRef = useRef(false);
 
+  // Pre-compute calorie estimate from workout plan
+  const { workSec, restSec } = splitWorkRestTime(
+    workout.exercises,
+    workout.rounds,
+    workout.rest_between_rounds
+  );
+  const canEstimateKcal = !!(bodyStats?.weight_kg && bodyStats?.sex);
+  const plannedKcal = canEstimateKcal
+    ? estimateCalories({
+        workTimeSec: workSec,
+        restTimeSec: restSec,
+        weightKg: bodyStats!.weight_kg!,
+        sex: bodyStats!.sex!,
+        intensityOverride: workout.intensity_override,
+      })
+    : null;
+
   // Log a completed session exactly once when the workout finishes.
   useEffect(() => {
     if (!runner.isFinished || loggedRef.current) return;
     if (!runner.startedAt) return;
     loggedRef.current = true;
+
+    // Compute actual calories from elapsed time (scale planned estimate)
+    let actualKcal: number | undefined;
+    if (canEstimateKcal && plannedKcal && runner.totalPlanSec > 0) {
+      const ratio = runner.elapsedSec / runner.totalPlanSec;
+      actualKcal = Math.round(plannedKcal * ratio);
+    }
+
     logSession({
       workout_id: workout.id,
       workout_name: workout.name,
@@ -59,6 +88,7 @@ export function Runner({
       total_duration_sec: runner.elapsedSec,
       rounds_completed: workout.rounds,
       status: "completed",
+      calories_burned: actualKcal,
     }).catch(() => {
       // History logging is best-effort — failure shouldn't break the UI.
     });
@@ -66,9 +96,12 @@ export function Runner({
     runner.isFinished,
     runner.startedAt,
     runner.elapsedSec,
+    runner.totalPlanSec,
     workout.id,
     workout.name,
     workout.rounds,
+    canEstimateKcal,
+    plannedKcal,
   ]);
 
   // Clear any pending speech on unmount.
@@ -94,6 +127,7 @@ export function Runner({
               {workout.exercises.length} exercises · {workout.rounds}{" "}
               {workout.rounds === 1 ? "round" : "rounds"} ·{" "}
               {formatDuration(runner.totalPlanSec)}
+              {plannedKcal !== null ? ` · ~${plannedKcal} kcal` : ""}
             </p>
           </div>
           <Button
@@ -121,6 +155,9 @@ export function Runner({
           <p className="text-muted-foreground">
             {formatDuration(runner.elapsedSec)} ·{" "}
             {workout.rounds} {workout.rounds === 1 ? "round" : "rounds"}
+            {canEstimateKcal && plannedKcal && runner.totalPlanSec > 0
+              ? ` · ${Math.round(plannedKcal * (runner.elapsedSec / runner.totalPlanSec))} kcal`
+              : ""}
           </p>
           <Button onClick={() => router.replace("/")} className="mt-4">
             Done

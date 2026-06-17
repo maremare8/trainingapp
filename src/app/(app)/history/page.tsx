@@ -1,4 +1,4 @@
-import { Flame, Activity, Clock, CalendarDays } from "lucide-react";
+import { Flame, Activity, Clock, CalendarDays, Zap } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { ActivityGraph } from "@/components/history/activity-graph";
@@ -56,6 +56,13 @@ export default async function HistoryPage() {
           label="Total time"
           value={formatDurationShort(stats.totalSeconds)}
         />
+        {stats.totalCalories > 0 && (
+          <StatCard
+            icon={<Zap className="size-4" />}
+            label="Total calories"
+            value={`${stats.totalCalories} kcal`}
+          />
+        )}
       </div>
 
       {sessions.length === 0 ? (
@@ -73,6 +80,7 @@ export default async function HistoryPage() {
                   {s.rounds_completed > 0
                     ? ` · ${s.rounds_completed} ${s.rounds_completed === 1 ? "round" : "rounds"}`
                     : ""}
+                  {s.calories_burned ? ` · ${s.calories_burned} kcal` : ""}
                 </div>
               </div>
             </div>

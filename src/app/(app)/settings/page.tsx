@@ -4,7 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { SignOutButton } from "./sign-out-button";
 import { StreakGoalPicker } from "./streak-goal-picker";
 import { VoiceCueSettings } from "./voice-cue-settings";
-import { getStreakGoal, getVoiceCueSettings } from "@/app/(app)/actions";
+import { BodyStatsSettings } from "./body-stats-settings";
+import { getStreakGoal, getVoiceCueSettings, getBodyStats } from "@/app/(app)/actions";
 
 export const metadata = { title: "Settings" };
 
@@ -12,13 +13,21 @@ export default async function SettingsPage() {
   let email: string | null = null;
   let streakGoal = 2;
   let voiceCues = { cue_halfway: true, cue_10s: true };
+  let bodyStats: { weight_kg: number | null; sex: "male" | "female" | null } = {
+    weight_kg: null,
+    sex: null,
+  };
   try {
     const supabase = await createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
     email = user?.email ?? null;
-    [streakGoal, voiceCues] = await Promise.all([getStreakGoal(), getVoiceCueSettings()]);
+    [streakGoal, voiceCues, bodyStats] = await Promise.all([
+      getStreakGoal(),
+      getVoiceCueSettings(),
+      getBodyStats(),
+    ]);
   } catch {
     // Supabase not configured yet — render without account info.
   }
@@ -47,6 +56,12 @@ export default async function SettingsPage() {
         <Card>
           <CardContent className="py-4">
             <VoiceCueSettings cueHalfway={voiceCues.cue_halfway} cue10s={voiceCues.cue_10s} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="py-4">
+            <BodyStatsSettings weightKg={bodyStats.weight_kg} sex={bodyStats.sex} />
           </CardContent>
         </Card>
       </div>

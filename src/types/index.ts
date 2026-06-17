@@ -29,6 +29,8 @@ export interface Exercise {
   created_at: string;
 }
 
+export type IntensityOverride = "light" | "moderate" | "high" | "extreme";
+
 export interface Workout {
   id: string;
   user_id: string;
@@ -38,6 +40,7 @@ export interface Workout {
   rest_between_exercises: number;
   cue_halfway: boolean;
   cue_10s: boolean;
+  intensity_override: IntensityOverride | null;
   created_at: string;
   updated_at: string;
 }
@@ -56,6 +59,7 @@ export interface WorkoutSession {
   total_duration_sec: number;
   rounds_completed: number;
   status: SessionStatus;
+  calories_burned: number | null;
 }
 
 // Input shapes used when creating/editing (before the DB assigns ids/timestamps).
@@ -66,5 +70,5 @@ export type ExerciseInput = Pick<
 
 export type WorkoutInput = Pick<
   Workout,
-  "name" | "rounds" | "rest_between_rounds" | "rest_between_exercises" | "cue_halfway" | "cue_10s"
+  "name" | "rounds" | "rest_between_rounds" | "rest_between_exercises" | "cue_halfway" | "cue_10s" | "intensity_override"
 >;

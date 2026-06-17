@@ -3,6 +3,7 @@ import type { WorkoutSession } from "@/types";
 export interface SessionStats {
   totalCompleted: number;
   totalSeconds: number;
+  totalCalories: number;
   currentStreak: number;
   longestStreak: number;
   thisWeekCount: number;
@@ -21,6 +22,11 @@ export function computeStats(
 ): SessionStats {
   const totalSeconds = sessions.reduce(
     (acc, s) => acc + s.total_duration_sec,
+    0
+  );
+
+  const totalCalories = sessions.reduce(
+    (acc, s) => acc + (s.calories_burned ?? 0),
     0
   );
 
@@ -92,6 +98,7 @@ export function computeStats(
   return {
     totalCompleted: sessions.length,
     totalSeconds,
+    totalCalories,
     currentStreak,
     longestStreak,
     thisWeekCount,

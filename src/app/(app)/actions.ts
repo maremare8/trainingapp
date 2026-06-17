@@ -141,6 +141,7 @@ export async function logSession(input: {
   total_duration_sec: number;
   rounds_completed: number;
   status: SessionStatus;
+  calories_burned?: number;
 }) {
   const { supabase, userId } = await getUserId();
 
@@ -153,6 +154,7 @@ export async function logSession(input: {
     total_duration_sec: input.total_duration_sec,
     rounds_completed: input.rounds_completed,
     status: input.status,
+    calories_burned: input.calories_burned ?? null,
   });
   if (error) throw error;
 
@@ -211,4 +213,36 @@ export async function updateVoiceCues(cueHalfway: boolean, cue10s: boolean) {
     .eq("id", userId);
   if (error) throw error;
   revalidatePath("/settings");
+}
+
+// ---------- Body stats (calorie estimation) ----------
+
+export async function getBodyStats(): Promise<{
+  weight_kg: number | null;
+  sex: "male" | "female" | null;
+}> {
+  const { userId, supabase } = await getUserId();
+  const { data } = await supabase
+    .from("profiles")
+    .select("weight_kg, sex")
+    .eq("id", userId)
+    .single();
+  return {
+    weight_kg: data?.weight_kg ?? null,
+    sex: data?.sex ?? null,
+  };
+}
+
+export async function updateBodyStats(
+  weightKg: number | null,
+  sex: "male" | "female" | null
+) {
+  const { userId, supabase } = await getUserId();
+  const { error } = await supabase
+    .from("profiles")
+    .update({ weight_kg: weightKg, sex })
+    .eq("id", userId);
+  if (error) throw error;
+  revalidatePath("/settings");
+  revalidatePath("/");
 }

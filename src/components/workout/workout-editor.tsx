@@ -22,14 +22,18 @@ import {
 } from "@/app/(app)/actions";
 import type {
   ExerciseInput,
+  IntensityOverride,
   WorkoutInput,
   WorkoutWithExercises,
 } from "@/types";
 import { estimateExercisesDuration } from "@/lib/workout-stats";
+import { splitWorkRestTimeDraft } from "@/lib/workout-stats";
+import { estimateCalories } from "@/lib/calories";
 import { formatDurationShort } from "@/lib/format";
 
 interface Props {
   workout?: WorkoutWithExercises;
+  bodyStats?: { weight_kg: number | null; sex: "male" | "female" | null };
 }
 
 const RANDOM_NAMES = [
@@ -83,7 +87,7 @@ function makeId() {
   return Math.random().toString(36).slice(2, 10);
 }
 
-export function WorkoutEditor({ workout }: Props) {
+export function WorkoutEditor({ workout, bodyStats }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
@@ -95,6 +99,9 @@ export function WorkoutEditor({ workout }: Props) {
   );
   const [restBetweenExercises, setRestBetweenExercises] = useState(
     workout?.rest_between_exercises ?? 15
+  );
+  const [intensityOverride, setIntensityOverride] = useState<IntensityOverride | null>(
+    workout?.intensity_override ?? null
   );
 
   const [items, setItems] = useState<DraftExercise[]>(
@@ -176,6 +183,7 @@ export function WorkoutEditor({ workout }: Props) {
       rest_between_exercises: Math.max(0, restBetweenExercises),
       cue_halfway: true,
       cue_10s: true,
+      intensity_override: intensityOverride,
     };
     // Apply the global rest_between_exercises to each exercise
     const exercises: ExerciseInput[] = items.map((it, i) => ({
@@ -227,6 +235,24 @@ export function WorkoutEditor({ workout }: Props) {
       created_at: "",
     }))
   );
+
+  const { workSec, restSec } = splitWorkRestTimeDraft(
+    items,
+    rounds,
+    restBetweenExercises,
+    restBetween
+  );
+
+  const estimatedKcal =
+    bodyStats?.weight_kg && bodyStats?.sex && items.length > 0
+      ? estimateCalories({
+          workTimeSec: workSec,
+          restTimeSec: restSec,
+          weightKg: bodyStats.weight_kg,
+          sex: bodyStats.sex,
+          intensityOverride,
+        })
+      : null;
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-5">
@@ -284,6 +310,32 @@ export function WorkoutEditor({ workout }: Props) {
             step={5}
             onChange={setRestBetweenExercises}
           />
+          <Separator />
+          <div className="flex items-center justify-between gap-3">
+            <Label htmlFor="intensity" className="text-sm font-medium shrink-0">
+              Intensity
+            </Label>
+            <div className="flex gap-1 rounded-lg border p-0.5">
+              {([null, "light", "moderate", "high", "extreme"] as const).map(
+                (option) => (
+                  <button
+                    key={option ?? "auto"}
+                    type="button"
+                    onClick={() => setIntensityOverride(option)}
+                    className={`rounded-md px-2 py-1 text-[11px] font-medium transition-colors ${
+                      intensityOverride === option
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {option === null
+                      ? "Auto"
+                      : option.charAt(0).toUpperCase() + option.slice(1)}
+                  </button>
+                )
+              )}
+            </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -293,7 +345,9 @@ export function WorkoutEditor({ workout }: Props) {
           <p className="text-muted-foreground text-xs">
             {items.length === 0
               ? "No exercises yet"
-              : `${items.length} · ~${formatDurationShort(totalSec)} per round`}
+              : `${items.length} · ~${formatDurationShort(totalSec)} per round${
+                  estimatedKcal !== null ? ` · ~${estimatedKcal} kcal` : ""
+                }`}
           </p>
         </div>
         <Button type="button" variant="outline" size="sm" onClick={onAddClick}>
