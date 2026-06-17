@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Save, ArrowLeft, Play } from "lucide-react";
+import { Plus, Save, ArrowLeft, Play, Zap, Clock } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -28,7 +28,8 @@ import type {
 } from "@/types";
 import { estimateExercisesDuration } from "@/lib/workout-stats";
 import { splitWorkRestTimeDraft } from "@/lib/workout-stats";
-import { estimateCalories } from "@/lib/calories";
+import { estimateCalories, autoIntensityLabel } from "@/lib/calories";
+import type { IntensityOverride as IntensityOverrideType } from "@/lib/calories";
 import { formatDurationShort } from "@/lib/format";
 
 interface Props {
@@ -255,6 +256,7 @@ export function WorkoutEditor({ workout, bodyStats }: Props) {
       : null;
 
   return (
+    <>
     <form onSubmit={onSubmit} className="flex flex-col gap-5">
       <div className="flex items-center gap-2">
         <Button
@@ -311,31 +313,11 @@ export function WorkoutEditor({ workout, bodyStats }: Props) {
             onChange={setRestBetweenExercises}
           />
           <Separator />
-          <div className="flex items-center justify-between gap-3">
-            <Label htmlFor="intensity" className="text-sm font-medium shrink-0">
-              Intensity
-            </Label>
-            <div className="flex gap-1 rounded-lg border p-0.5">
-              {([null, "light", "moderate", "high", "extreme"] as const).map(
-                (option) => (
-                  <button
-                    key={option ?? "auto"}
-                    type="button"
-                    onClick={() => setIntensityOverride(option)}
-                    className={`rounded-md px-2 py-1 text-[11px] font-medium transition-colors ${
-                      intensityOverride === option
-                        ? "bg-primary/10 text-primary"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    {option === null
-                      ? "Auto"
-                      : option.charAt(0).toUpperCase() + option.slice(1)}
-                  </button>
-                )
-              )}
-            </div>
-          </div>
+          <IntensitySelector
+            value={intensityOverride}
+            autoEstimate={autoIntensityLabel(workSec, restSec)}
+            onChange={setIntensityOverride}
+          />
         </CardContent>
       </Card>
 
@@ -345,9 +327,7 @@ export function WorkoutEditor({ workout, bodyStats }: Props) {
           <p className="text-muted-foreground text-xs">
             {items.length === 0
               ? "No exercises yet"
-              : `${items.length} · ~${formatDurationShort(totalSec)} per round${
-                  estimatedKcal !== null ? ` · ~${estimatedKcal} kcal` : ""
-                }`}
+              : `${items.length} · ~${formatDurationShort(totalSec)} per round`}
           </p>
         </div>
         <Button type="button" variant="outline" size="sm" onClick={onAddClick}>
@@ -370,12 +350,27 @@ export function WorkoutEditor({ workout, bodyStats }: Props) {
         />
       )}
 
-      <ExerciseSheet
-        open={sheetOpen}
-        onOpenChange={setSheetOpen}
-        initial={editing}
-        onSave={onSaveExercise}
-      />
+      {items.length > 0 && (
+        <Card>
+          <CardContent className="flex items-center gap-4 py-3">
+            <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
+              <Clock className="size-3.5" />
+              <span>~{formatDurationShort(totalSec * rounds)}</span>
+            </div>
+            {estimatedKcal !== null && (
+              <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
+                <Zap className="size-3.5" />
+                <span>~{estimatedKcal} kcal</span>
+              </div>
+            )}
+            {estimatedKcal === null && bodyStats?.weight_kg == null && (
+              <p className="text-muted-foreground text-[11px]">
+                Set weight in Settings for calorie estimate
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Button type="submit" disabled={pending} className="mt-2">
         <Save className="size-4" />
@@ -392,6 +387,14 @@ export function WorkoutEditor({ workout, bodyStats }: Props) {
         {pending && runAfterSave ? "Saving…" : "Run workout"}
       </Button>
     </form>
+
+    <ExerciseSheet
+      open={sheetOpen}
+      onOpenChange={setSheetOpen}
+      initial={editing}
+      onSave={onSaveExercise}
+    />
+  </>
   );
 }
 
@@ -459,6 +462,63 @@ function NumberField({
         >
           +
         </Button>
+      </div>
+    </div>
+  );
+}
+
+const INTENSITY_OPTIONS: IntensityOverrideType[] = [
+  "light",
+  "moderate",
+  "high",
+  "extreme",
+];
+
+function IntensitySelector({
+  value,
+  autoEstimate,
+  onChange,
+}: {
+  value: IntensityOverrideType | null;
+  autoEstimate: IntensityOverrideType;
+  onChange: (v: IntensityOverrideType | null) => void;
+}) {
+  const active = value ?? autoEstimate;
+  const isAuto = value === null;
+
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <div className="min-w-0">
+        <Label className="text-sm font-medium">Intensity</Label>
+        {isAuto && (
+          <p className="text-muted-foreground text-[10px]">Auto-estimated</p>
+        )}
+      </div>
+      <div className="flex gap-1 rounded-lg border p-0.5">
+        {INTENSITY_OPTIONS.map((option) => {
+          const isActive = active === option;
+          return (
+            <button
+              key={option}
+              type="button"
+              onClick={() => {
+                if (value === option) {
+                  onChange(null);
+                } else {
+                  onChange(option);
+                }
+              }}
+              className={cn(
+                "rounded-md px-2 py-1 text-[11px] font-medium transition-colors",
+                isActive
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {option.charAt(0).toUpperCase() + option.slice(1)}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

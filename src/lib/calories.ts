@@ -53,6 +53,20 @@ function autoProfile(workSec: number, restSec: number): MetProfile {
   return { metWork: 7, metRest: 3.0, epoc: 1.07 };
 }
 
+/**
+ * Return the auto-estimated intensity label based on work-to-rest ratio.
+ */
+export function autoIntensityLabel(
+  workSec: number,
+  restSec: number
+): IntensityOverride {
+  if (restSec <= 0) return "high";
+  const ratio = workSec / restSec;
+  if (ratio >= 2) return "high";
+  if (ratio >= 1) return "moderate";
+  return "light";
+}
+
 export interface CalorieInput {
   /** Total active exercise seconds (across all rounds). */
   workTimeSec: number;

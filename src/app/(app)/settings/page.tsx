@@ -5,6 +5,7 @@ import { SignOutButton } from "./sign-out-button";
 import { StreakGoalPicker } from "./streak-goal-picker";
 import { VoiceCueSettings } from "./voice-cue-settings";
 import { BodyStatsSettings } from "./body-stats-settings";
+import { RestorePresetsButton } from "./restore-presets-button";
 import { getStreakGoal, getVoiceCueSettings, getBodyStats } from "@/app/(app)/actions";
 
 export const metadata = { title: "Settings" };
@@ -62,6 +63,16 @@ export default async function SettingsPage() {
         <Card>
           <CardContent className="py-4">
             <BodyStatsSettings weightKg={bodyStats.weight_kg} sex={bodyStats.sex} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="flex flex-col gap-2 py-4">
+            <label className="text-sm font-medium">Workouts</label>
+            <p className="text-muted-foreground text-xs">
+              Add preset bodyweight, kettlebell, and TRX workouts. Existing presets won&apos;t be duplicated.
+            </p>
+            <RestorePresetsButton />
           </CardContent>
         </Card>
       </div>

@@ -246,3 +246,41 @@ export async function updateBodyStats(
   revalidatePath("/settings");
   revalidatePath("/");
 }
+
+// ---------- Preset workouts ----------
+
+export async function restorePresets() {
+  const { userId, supabase } = await getUserId();
+  const { PRESET_WORKOUTS } = await import("@/lib/preset-workouts");
+
+  for (const preset of PRESET_WORKOUTS) {
+    // Check if a workout with this name already exists for the user
+    const { data: existing } = await supabase
+      .from("workouts")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("name", preset.workout.name)
+      .maybeSingle();
+
+    if (existing) continue; // Skip duplicates
+
+    const { data: created, error: wErr } = await supabase
+      .from("workouts")
+      .insert({ ...preset.workout, user_id: userId })
+      .select("id")
+      .single();
+    if (wErr) throw wErr;
+
+    if (preset.exercises.length > 0) {
+      const rows = preset.exercises.map((e, i) => ({
+        ...e,
+        position: i,
+        workout_id: created.id,
+      }));
+      const { error: exErr } = await supabase.from("exercises").insert(rows);
+      if (exErr) throw exErr;
+    }
+  }
+
+  revalidatePath("/");
+}
