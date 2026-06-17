@@ -31,9 +31,15 @@ import { stopSpeaking } from "@/lib/speech";
 import { cn } from "@/lib/utils";
 import type { WorkoutWithExercises } from "@/types";
 
-export function Runner({ workout }: { workout: WorkoutWithExercises }) {
+export function Runner({
+  workout,
+  cueSettings,
+}: {
+  workout: WorkoutWithExercises;
+  cueSettings?: { cue_halfway: boolean; cue_10s: boolean };
+}) {
   const router = useRouter();
-  const runner = useRunner(workout);
+  const runner = useRunner(workout, cueSettings);
   useWakeLock(runner.status === "running");
 
   const [confirmAbortOpen, setConfirmAbortOpen] = useState(false);

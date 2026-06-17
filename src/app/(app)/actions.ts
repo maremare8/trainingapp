@@ -102,6 +102,7 @@ export async function duplicateWorkout(id: string) {
       name: `${source.name} (copy)`,
       rounds: source.rounds,
       rest_between_rounds: source.rest_between_rounds,
+      rest_between_exercises: source.rest_between_exercises,
       cue_halfway: source.cue_halfway,
       cue_10s: source.cue_10s,
     })
@@ -191,4 +192,24 @@ export async function updateStreakGoal(days: number) {
   if (error) throw error;
   revalidatePath("/settings");
   revalidatePath("/history");
+}
+
+export async function getVoiceCueSettings(): Promise<{ cue_halfway: boolean; cue_10s: boolean }> {
+  const { userId, supabase } = await getUserId();
+  const { data } = await supabase
+    .from("profiles")
+    .select("cue_halfway, cue_10s")
+    .eq("id", userId)
+    .single();
+  return { cue_halfway: data?.cue_halfway ?? true, cue_10s: data?.cue_10s ?? true };
+}
+
+export async function updateVoiceCues(cueHalfway: boolean, cue10s: boolean) {
+  const { userId, supabase } = await getUserId();
+  const { error } = await supabase
+    .from("profiles")
+    .update({ cue_halfway: cueHalfway, cue_10s: cue10s })
+    .eq("id", userId);
+  if (error) throw error;
+  revalidatePath("/settings");
 }

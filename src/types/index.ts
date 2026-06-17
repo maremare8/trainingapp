@@ -9,6 +9,8 @@ export interface Profile {
   id: string;
   display_name: string | null;
   streak_goal_days: number;
+  cue_halfway: boolean;
+  cue_10s: boolean;
   created_at: string;
 }
 
@@ -33,6 +35,7 @@ export interface Workout {
   name: string;
   rounds: number;
   rest_between_rounds: number;
+  rest_between_exercises: number;
   cue_halfway: boolean;
   cue_10s: boolean;
   created_at: string;
@@ -63,5 +66,5 @@ export type ExerciseInput = Pick<
 
 export type WorkoutInput = Pick<
   Workout,
-  "name" | "rounds" | "rest_between_rounds" | "cue_halfway" | "cue_10s"
+  "name" | "rounds" | "rest_between_rounds" | "rest_between_exercises" | "cue_halfway" | "cue_10s"
 >;

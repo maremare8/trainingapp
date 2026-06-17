@@ -67,7 +67,6 @@ function ExerciseForm({
   const [type, setType] = useState<ExerciseType>(v.type);
   const [duration, setDuration] = useState<number>(v.duration_sec ?? 30);
   const [reps, setReps] = useState<number>(v.reps ?? 10);
-  const [rest, setRest] = useState<number>(v.rest_after_sec);
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -78,12 +77,12 @@ function ExerciseForm({
       type,
       duration_sec: type === "time" ? Math.max(1, duration) : null,
       reps: type === "reps" ? Math.max(1, reps) : null,
-      rest_after_sec: Math.max(0, rest),
+      rest_after_sec: 0, // controlled at workout level now
     });
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-5">
+    <form onSubmit={onSubmit} className="flex flex-col gap-5 px-6">
       <SheetHeader>
         <SheetTitle>{initial ? "Edit exercise" : "Add exercise"}</SheetTitle>
         <SheetDescription>
@@ -144,16 +143,6 @@ function ExerciseForm({
           quickSteps={[5, 10, 15, 20, 25]}
         />
       )}
-
-      <NumberRow
-        id="ex-rest"
-        label="Rest after"
-        unit="sec"
-        value={rest}
-        min={0}
-        onChange={setRest}
-        quickSteps={[0, 10, 15, 30, 60]}
-      />
 
       <SheetFooter>
         <Button type="submit" className="w-full">

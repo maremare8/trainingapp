@@ -108,7 +108,10 @@ export interface RunnerApi {
   completeReps: () => void;
 }
 
-export function useRunner(workout: WorkoutWithExercises): RunnerApi {
+export function useRunner(
+  workout: WorkoutWithExercises,
+  cueSettings?: { cue_halfway: boolean; cue_10s: boolean }
+): RunnerApi {
   const steps = useMemo(() => buildSteps(workout), [workout]);
   const totalPlanSec = useMemo(() => planTotalSeconds(steps), [steps]);
 
@@ -170,7 +173,7 @@ export function useRunner(workout: WorkoutWithExercises): RunnerApi {
 
     // 10-second cue: only meaningful when there's more than 10s of work.
     if (
-      workout.cue_10s &&
+      (cueSettings?.cue_10s ?? workout.cue_10s) &&
       !state.cuesFiredForStep.tenSec &&
       dur > 10 &&
       remSec <= 10 &&
@@ -184,7 +187,7 @@ export function useRunner(workout: WorkoutWithExercises): RunnerApi {
 
     // Halfway cue: only meaningful for longer timed exercises.
     if (
-      workout.cue_halfway &&
+      (cueSettings?.cue_halfway ?? workout.cue_halfway) &&
       !state.cuesFiredForStep.halfway &&
       step.kind === "exercise" &&
       dur >= 20 &&
@@ -201,6 +204,8 @@ export function useRunner(workout: WorkoutWithExercises): RunnerApi {
     state.steps,
     state.cuesFiredForStep.halfway,
     state.cuesFiredForStep.tenSec,
+    cueSettings?.cue_halfway,
+    cueSettings?.cue_10s,
     workout.cue_halfway,
     workout.cue_10s,
   ]);

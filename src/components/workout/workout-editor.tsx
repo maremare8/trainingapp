@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import {
   ExerciseList,
@@ -32,6 +31,53 @@ interface Props {
   workout?: WorkoutWithExercises;
 }
 
+const RANDOM_NAMES = [
+  "Beast Mode",
+  "Sweat Storm",
+  "Thunder Round",
+  "Iron Will",
+  "Blaze Circuit",
+  "Power Hour",
+  "Grind Time",
+  "Fire Drill",
+  "Turbo Burn",
+  "Savage Set",
+  "Lightning Lap",
+  "Muscle Mayhem",
+  "Full Send",
+  "Pain Train",
+  "Rocket Fuel",
+  "Chaos Mode",
+  "Wrecking Ball",
+  "Hyper Drive",
+  "Atomic Drop",
+  "Inferno Rush",
+  "Viking Assault",
+  "Nitro Blast",
+  "Gut Check",
+  "Iron Storm",
+  "Primal Fury",
+  "Death March",
+  "Venom Circuit",
+  "Solar Flare",
+  "Juggernaut",
+  "Titan Grind",
+  "Earthquake",
+  "Supernova",
+  "War Cry",
+  "Ghost Rider",
+  "Thunderclap",
+  "Meteor Shower",
+  "Zero Gravity",
+  "Berserker",
+  "Dragon Breath",
+  "Avalanche",
+];
+
+function getRandomName() {
+  return RANDOM_NAMES[Math.floor(Math.random() * RANDOM_NAMES.length)];
+}
+
 function makeId() {
   return Math.random().toString(36).slice(2, 10);
 }
@@ -40,13 +86,15 @@ export function WorkoutEditor({ workout }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
+  const [placeholderName] = useState(getRandomName);
   const [name, setName] = useState(workout?.name ?? "");
   const [rounds, setRounds] = useState(workout?.rounds ?? 1);
   const [restBetween, setRestBetween] = useState(
     workout?.rest_between_rounds ?? 30
   );
-  const [cueHalfway, setCueHalfway] = useState(workout?.cue_halfway ?? true);
-  const [cue10s, setCue10s] = useState(workout?.cue_10s ?? true);
+  const [restBetweenExercises, setRestBetweenExercises] = useState(
+    workout?.rest_between_exercises ?? 15
+  );
 
   const [items, setItems] = useState<DraftExercise[]>(
     () =>
@@ -111,29 +159,29 @@ export function WorkoutEditor({ workout }: Props) {
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim()) {
-      toast.error("Give your workout a name");
-      return;
-    }
     if (items.length === 0) {
       toast.error("Add at least one exercise");
       return;
     }
 
+    const finalName = name.trim() || placeholderName;
+
     const payload: WorkoutInput = {
-      name: name.trim(),
+      name: finalName,
       rounds: Math.max(1, rounds),
       rest_between_rounds: Math.max(0, restBetween),
-      cue_halfway: cueHalfway,
-      cue_10s: cue10s,
+      rest_between_exercises: Math.max(0, restBetweenExercises),
+      cue_halfway: true,
+      cue_10s: true,
     };
+    // Apply the global rest_between_exercises to each exercise
     const exercises: ExerciseInput[] = items.map((it, i) => ({
       position: i,
       name: it.name,
       type: it.type,
       duration_sec: it.duration_sec,
       reps: it.reps,
-      rest_after_sec: it.rest_after_sec,
+      rest_after_sec: restBetweenExercises,
     }));
 
     startTransition(async () => {
@@ -144,7 +192,6 @@ export function WorkoutEditor({ workout }: Props) {
           router.refresh();
         } else {
           await createWorkout(payload, exercises);
-          // createWorkout redirects on success — toast lives on the destination
         }
       } catch (err) {
         toast.error(err instanceof Error ? err.message : "Could not save");
@@ -161,7 +208,7 @@ export function WorkoutEditor({ workout }: Props) {
       type: it.type,
       duration_sec: it.duration_sec,
       reps: it.reps,
-      rest_after_sec: it.rest_after_sec,
+      rest_after_sec: restBetweenExercises,
       created_at: "",
     }))
   );
@@ -188,8 +235,7 @@ export function WorkoutEditor({ workout }: Props) {
           id="workout-name"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="e.g. Morning HIIT"
-          required
+          placeholder={placeholderName}
         />
       </div>
 
@@ -205,7 +251,7 @@ export function WorkoutEditor({ workout }: Props) {
           />
           <Separator />
           <NumberField
-            id="rest-between"
+            id="rest-between-rounds"
             label="Rest between rounds"
             value={restBetween}
             min={0}
@@ -213,25 +259,15 @@ export function WorkoutEditor({ workout }: Props) {
             step={5}
             onChange={setRestBetween}
           />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardContent className="flex flex-col gap-3 py-4">
-          <div className="text-sm font-semibold">Voice cues</div>
-          <CueRow
-            id="cue-half"
-            label="Announce at halfway"
-            description="On timed exercises only"
-            checked={cueHalfway}
-            onChange={setCueHalfway}
-          />
-          <CueRow
-            id="cue-10s"
-            label="Announce 10 seconds left"
-            description="On timed exercises only"
-            checked={cue10s}
-            onChange={setCue10s}
+          <Separator />
+          <NumberField
+            id="rest-between-exercises"
+            label="Rest between exercises"
+            value={restBetweenExercises}
+            min={0}
+            unit="sec"
+            step={5}
+            onChange={setRestBetweenExercises}
           />
         </CardContent>
       </Card>
@@ -341,34 +377,6 @@ function NumberField({
           <span className="text-muted-foreground w-8 text-xs">{unit}</span>
         ) : null}
       </div>
-    </div>
-  );
-}
-
-function CueRow({
-  id,
-  label,
-  description,
-  checked,
-  onChange,
-}: {
-  id: string;
-  label: string;
-  description?: string;
-  checked: boolean;
-  onChange: (next: boolean) => void;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-3">
-      <div className="min-w-0">
-        <Label htmlFor={id} className="text-sm font-medium">
-          {label}
-        </Label>
-        {description ? (
-          <p className="text-muted-foreground text-xs">{description}</p>
-        ) : null}
-      </div>
-      <Switch id={id} checked={checked} onCheckedChange={onChange} />
     </div>
   );
 }
