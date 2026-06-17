@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 import {
   ExerciseList,
   type DraftExercise,
@@ -240,14 +241,13 @@ export function WorkoutEditor({ workout }: Props) {
       </div>
 
       <Card>
-        <CardContent className="flex flex-col gap-4 py-4">
+        <CardContent className="flex flex-col gap-4">
           <NumberField
             id="rounds"
             label="Rounds"
             value={rounds}
             min={1}
             onChange={setRounds}
-            hint="Loop the whole sequence"
           />
           <Separator />
           <NumberField
@@ -355,15 +355,25 @@ function NumberField({
         >
           −
         </Button>
-        <Input
-          id={id}
-          type="number"
-          inputMode="numeric"
-          min={min}
-          value={Number.isFinite(value) ? value : 0}
-          onChange={(e) => onChange(Math.max(min, Number(e.target.value)))}
-          className="w-16 text-center [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-        />
+        <div className="relative">
+          <Input
+            id={id}
+            type="number"
+            inputMode="numeric"
+            min={min}
+            value={Number.isFinite(value) ? value : 0}
+            onChange={(e) => onChange(Math.max(min, Number(e.target.value)))}
+            className={cn(
+              "w-20 text-center [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
+              unit && "pr-8"
+            )}
+          />
+          {unit ? (
+            <span className="text-muted-foreground pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-xs">
+              {unit}
+            </span>
+          ) : null}
+        </div>
         <Button
           type="button"
           variant="outline"
@@ -373,9 +383,6 @@ function NumberField({
         >
           +
         </Button>
-        {unit ? (
-          <span className="text-muted-foreground w-8 text-xs">{unit}</span>
-        ) : null}
       </div>
     </div>
   );

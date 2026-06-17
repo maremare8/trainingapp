@@ -131,7 +131,7 @@ function SortableItem({
       : `${item.reps ?? 0} reps`;
 
   return (
-    <Card ref={setNodeRef} style={style} className="touch-none">
+    <Card ref={setNodeRef} style={style} className="touch-none py-0">
       <div className="flex items-center gap-2 px-2 py-2.5">
         <button
           type="button"

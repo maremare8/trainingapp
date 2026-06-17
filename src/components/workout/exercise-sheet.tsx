@@ -99,7 +99,6 @@ function ExerciseForm({
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="e.g. Burpees"
-          autoFocus
           required
         />
       </div>
@@ -171,7 +170,7 @@ function TypeButton({
       className={cn(
         "flex items-center justify-center gap-2 rounded-lg border px-3 py-3 text-sm font-medium transition-colors",
         active
-          ? "border-primary bg-primary/10 text-foreground"
+          ? "border-transparent bg-primary/10 text-foreground"
           : "border-border bg-background text-muted-foreground"
       )}
     >
@@ -211,15 +210,20 @@ function NumberRow({
         >
           −
         </Button>
-        <Input
-          id={id}
-          type="number"
-          inputMode="numeric"
-          min={min}
-          value={Number.isFinite(value) ? value : 0}
-          onChange={(e) => onChange(Math.max(min, Number(e.target.value)))}
-          className="text-center text-base [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-        />
+        <div className="relative flex-1">
+          <Input
+            id={id}
+            type="number"
+            inputMode="numeric"
+            min={min}
+            value={Number.isFinite(value) ? value : 0}
+            onChange={(e) => onChange(Math.max(min, Number(e.target.value)))}
+            className="text-center text-base pr-9 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          />
+          <span className="text-muted-foreground pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs">
+            {unit}
+          </span>
+        </div>
         <Button
           type="button"
           variant="outline"
@@ -229,7 +233,6 @@ function NumberRow({
         >
           +
         </Button>
-        <span className="text-muted-foreground w-10 text-sm">{unit}</span>
       </div>
       <div className="flex flex-wrap gap-1.5">
         {quickSteps.map((n) => (
