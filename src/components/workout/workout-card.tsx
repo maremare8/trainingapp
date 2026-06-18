@@ -37,12 +37,19 @@ import {
 } from "@/components/ui/alert-dialog";
 import { estimateWorkoutDuration } from "@/lib/workout-stats";
 import { formatDurationShort } from "@/lib/format";
+import { resolveEquipment } from "@/lib/equipment";
 
 export function WorkoutListItem({ workout }: { workout: WorkoutWithExercises }) {
   const [pending, startTransition] = useTransition();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const exerciseCount = workout.exercises.length;
   const totalSec = estimateWorkoutDuration(workout);
+
+  // Aggregate unique equipment from all exercises
+  const allEquipmentIds = [
+    ...new Set(workout.exercises.flatMap((e) => e.equipment ?? [])),
+  ];
+  const equipmentItems = resolveEquipment(allEquipmentIds);
 
   function onDuplicate() {
     startTransition(async () => {
@@ -100,6 +107,18 @@ export function WorkoutListItem({ workout }: { workout: WorkoutWithExercises }) 
               </span>
             ) : null}
           </span>
+          {equipmentItems.length > 0 && (
+            <span className="mt-0.5 flex flex-wrap gap-1">
+              {equipmentItems.map((eq) => (
+                <span
+                  key={eq.id}
+                  className={`inline-block rounded-full px-1.5 py-0 text-[10px] font-medium leading-4 ${eq.badgeClasses}`}
+                >
+                  {eq.label}
+                </span>
+              ))}
+            </span>
+          )}
         </Link>
 
         {/* Edit button */}

@@ -32,6 +32,7 @@ import { formatDuration } from "@/lib/format";
 import { stopSpeaking } from "@/lib/speech";
 import { estimateCalories } from "@/lib/calories";
 import { splitWorkRestTime } from "@/lib/workout-stats";
+import { resolveEquipment } from "@/lib/equipment";
 import { cn } from "@/lib/utils";
 import type { WorkoutWithExercises } from "@/types";
 
@@ -216,6 +217,19 @@ export function Runner({
           >
             {step.label}
           </h1>
+
+          {step.equipment.length > 0 && (
+            <div className="flex flex-wrap justify-center gap-1.5">
+              {resolveEquipment(step.equipment).map((eq) => (
+                <span
+                  key={eq.id}
+                  className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-medium ${eq.badgeClasses}`}
+                >
+                  {eq.label}
+                </span>
+              ))}
+            </div>
+          )}
 
           {isReps ? (
             <div className="text-7xl font-bold tabular-nums">{step.reps}</div>

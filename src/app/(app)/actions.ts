@@ -122,6 +122,7 @@ export async function duplicateWorkout(id: string) {
         duration_sec: e.duration_sec,
         reps: e.reps,
         rest_after_sec: e.rest_after_sec,
+        equipment: e.equipment ?? [],
       }));
     const { error: insErr } = await supabase.from("exercises").insert(rows);
     if (insErr) throw insErr;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Timer, Repeat } from "lucide-react";
+import { Timer, Repeat, Check } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import type { ExerciseInput, ExerciseType } from "@/types";
+import { EQUIPMENT_OPTIONS } from "@/lib/equipment";
 
 interface Props {
   open: boolean;
@@ -30,6 +31,7 @@ const DEFAULTS: ExerciseInput = {
   duration_sec: 30,
   reps: null,
   rest_after_sec: 15,
+  equipment: [],
 };
 
 /**
@@ -67,6 +69,7 @@ function ExerciseForm({
   const [type, setType] = useState<ExerciseType>(v.type);
   const [duration, setDuration] = useState<number>(v.duration_sec ?? 30);
   const [reps, setReps] = useState<number>(v.reps ?? 10);
+  const [equipment, setEquipment] = useState<string[]>(v.equipment ?? []);
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -78,11 +81,12 @@ function ExerciseForm({
       duration_sec: type === "time" ? Math.max(1, duration) : null,
       reps: type === "reps" ? Math.max(1, reps) : null,
       rest_after_sec: 0, // controlled at workout level now
+      equipment,
     });
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-5 px-6">
+    <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-6 pb-6">
       <SheetHeader>
         <SheetTitle>{initial ? "Edit exercise" : "Add exercise"}</SheetTitle>
         <SheetDescription>
@@ -142,6 +146,37 @@ function ExerciseForm({
           quickSteps={[5, 10, 15, 20, 25]}
         />
       )}
+
+      <div className="flex flex-col gap-2">
+        <Label>Equipment</Label>
+        <div className="flex flex-wrap gap-2">
+          {EQUIPMENT_OPTIONS.map((opt) => {
+            const selected = equipment.includes(opt.id);
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() =>
+                  setEquipment((prev) =>
+                    selected
+                      ? prev.filter((id) => id !== opt.id)
+                      : [...prev, opt.id]
+                  )
+                }
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+                  selected
+                    ? opt.badgeClasses
+                    : "bg-muted text-muted-foreground"
+                )}
+              >
+                {selected && <Check className="size-3" />}
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       <SheetFooter>
         <Button type="submit" className="w-full">

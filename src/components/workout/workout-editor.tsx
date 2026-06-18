@@ -115,6 +115,7 @@ export function WorkoutEditor({ workout, bodyStats }: Props) {
         duration_sec: e.duration_sec,
         reps: e.reps,
         rest_after_sec: e.rest_after_sec,
+        equipment: e.equipment ?? [],
       })) ?? []
   );
 
@@ -194,6 +195,7 @@ export function WorkoutEditor({ workout, bodyStats }: Props) {
       duration_sec: it.duration_sec,
       reps: it.reps,
       rest_after_sec: restBetweenExercises,
+      equipment: it.equipment ?? [],
     }));
 
     const shouldRun = runAfterSave;
@@ -233,6 +235,7 @@ export function WorkoutEditor({ workout, bodyStats }: Props) {
       duration_sec: it.duration_sec,
       reps: it.reps,
       rest_after_sec: restBetweenExercises,
+      equipment: it.equipment ?? [],
       created_at: "",
     }))
   );

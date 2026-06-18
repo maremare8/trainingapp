@@ -20,6 +20,8 @@ export interface RunnerStep {
   totalRounds: number;
   /** Index of this step in the overall plan (0-based). */
   index: number;
+  /** Equipment used for this exercise step (empty for rest/prepare). */
+  equipment: string[];
 }
 
 const PREPARE_SEC = 5;
@@ -47,6 +49,7 @@ export function buildSteps(workout: WorkoutWithExercises): RunnerStep[] {
     round: 1,
     totalRounds,
     index: 0,
+    equipment: [],
   });
 
   for (let r = 1; r <= totalRounds; r++) {
@@ -80,6 +83,7 @@ export function buildSteps(workout: WorkoutWithExercises): RunnerStep[] {
         round: r,
         totalRounds,
         index: steps.length,
+        equipment: ex.equipment ?? [],
       });
 
       // Rest after the exercise (skipped after the very last exercise of the
@@ -96,6 +100,7 @@ export function buildSteps(workout: WorkoutWithExercises): RunnerStep[] {
           round: r,
           totalRounds,
           index: steps.length,
+          equipment: [],
         });
       }
     }
@@ -111,6 +116,7 @@ export function buildSteps(workout: WorkoutWithExercises): RunnerStep[] {
         round: r,
         totalRounds,
         index: steps.length,
+        equipment: [],
       });
     }
   }

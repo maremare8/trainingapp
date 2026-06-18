@@ -36,6 +36,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { formatDuration } from "@/lib/format";
+import { resolveEquipment } from "@/lib/equipment";
 import type { ExerciseInput } from "@/types";
 
 interface DraftExercise extends ExerciseInput {
@@ -129,6 +130,7 @@ function SortableItem({
     item.type === "time"
       ? formatDuration(item.duration_sec ?? 0)
       : `${item.reps ?? 0} reps`;
+  const equipmentItems = resolveEquipment(item.equipment ?? []);
 
   return (
     <Card ref={setNodeRef} style={style} className="touch-none py-0">
@@ -158,6 +160,18 @@ function SortableItem({
               <span>· rest {formatDuration(item.rest_after_sec)}</span>
             ) : null}
           </div>
+          {equipmentItems.length > 0 && (
+            <div className="mt-1 flex flex-wrap gap-1">
+              {equipmentItems.map((eq) => (
+                <span
+                  key={eq.id}
+                  className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ${eq.badgeClasses}`}
+                >
+                  {eq.label}
+                </span>
+              ))}
+            </div>
+          )}
         </button>
 
         <DropdownMenu>

@@ -26,6 +26,8 @@ export interface Exercise {
   reps: number | null;
   /** Rest in seconds that follows this exercise. */
   rest_after_sec: number;
+  /** Equipment used for this exercise. */
+  equipment: string[];
   created_at: string;
 }
 
@@ -65,7 +67,7 @@ export interface WorkoutSession {
 // Input shapes used when creating/editing (before the DB assigns ids/timestamps).
 export type ExerciseInput = Pick<
   Exercise,
-  "name" | "type" | "duration_sec" | "reps" | "rest_after_sec" | "position"
+  "name" | "type" | "duration_sec" | "reps" | "rest_after_sec" | "position" | "equipment"
 >;
 
 export type WorkoutInput = Pick<
