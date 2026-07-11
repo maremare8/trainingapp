@@ -247,7 +247,7 @@ export function Runner({
           ) : null}
 
           {step.nextLabel ? (
-            <p className="text-sm text-white/70">Up next: {step.nextLabel}</p>
+            <p className="text-3xl font-bold text-white/70">Up next: {step.nextLabel}</p>
           ) : null}
         </div>
 
