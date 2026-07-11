@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { buildSteps, planTotalSeconds, type RunnerStep } from "@/lib/runner/plan";
 import { speak, stopSpeaking, warmUpSpeech } from "@/lib/speech";
+import { beep, warmUpAudio } from "@/lib/beep";
 import type { WorkoutWithExercises } from "@/types";
 
 type Status = "idle" | "running" | "paused" | "finished";
@@ -17,6 +18,8 @@ interface State {
   elapsedMs: number;
   startedAt: string | null;
   cuesFiredForStep: { halfway: boolean; tenSec: boolean };
+  /** Track which countdown beeps have been played (5, 4, 3, 2, 1) */
+  beepsFiredForStep: Set<number>;
 }
 
 type Action =
@@ -27,6 +30,7 @@ type Action =
   | { type: "ADVANCE" }
   | { type: "PREV" }
   | { type: "FIRE_CUE"; cue: "halfway" | "tenSec" }
+  | { type: "FIRE_BEEP"; sec: number }
   | { type: "FINISH" };
 
 function freshStepState(steps: RunnerStep[], stepIndex: number) {
@@ -35,6 +39,7 @@ function freshStepState(steps: RunnerStep[], stepIndex: number) {
     stepIndex,
     remainingMs: step.mode === "time" ? step.durationSec * 1000 : 0,
     cuesFiredForStep: { halfway: false, tenSec: false },
+    beepsFiredForStep: new Set<number>(),
   };
 }
 
@@ -77,6 +82,11 @@ function reducer(state: State, action: Action): State {
       return {
         ...state,
         cuesFiredForStep: { ...state.cuesFiredForStep, [action.cue]: true },
+      };
+    case "FIRE_BEEP":
+      return {
+        ...state,
+        beepsFiredForStep: new Set([...state.beepsFiredForStep, action.sec]),
       };
     case "FINISH":
       return { ...state, status: "finished" };
@@ -125,6 +135,7 @@ export function useRunner(
     elapsedMs: 0,
     startedAt: null,
     cuesFiredForStep: { halfway: false, tenSec: false },
+    beepsFiredForStep: new Set<number>(),
   }));
 
   const [isMuted, setIsMuted] = useState(false);
@@ -172,7 +183,7 @@ export function useRunner(
     }
   }, [state.remainingMs, state.status, state.stepIndex, state.steps]);
 
-  // Voice cues at halfway and 10s remaining on timed steps.
+  // Voice cue at halfway on timed exercise steps.
   useEffect(() => {
     if (state.status !== "running") return;
     const step = state.steps[state.stepIndex];
@@ -181,20 +192,6 @@ export function useRunner(
     const remSec = state.remainingMs / 1000;
     const dur = step.durationSec;
 
-    // 10-second cue: only meaningful when there's more than 10s of work.
-    if (
-      (cueSettings?.cue_10s ?? workout.cue_10s) &&
-      !state.cuesFiredForStep.tenSec &&
-      dur > 10 &&
-      remSec <= 10 &&
-      remSec > 0 &&
-      (step.kind === "exercise" || step.kind === "rest")
-    ) {
-      if (!mutedRef.current) speak("Ten seconds left");
-      dispatch({ type: "FIRE_CUE", cue: "tenSec" });
-      return;
-    }
-
     // Halfway cue: only meaningful for longer timed exercises.
     if (
       (cueSettings?.cue_halfway ?? workout.cue_halfway) &&
@@ -202,7 +199,7 @@ export function useRunner(
       step.kind === "exercise" &&
       dur >= 20 &&
       remSec <= dur / 2 &&
-      remSec > 10 // don't speak halfway right before the 10s cue
+      remSec > 5 // don't speak halfway right before the beeps
     ) {
       if (!mutedRef.current) speak("Halfway");
       dispatch({ type: "FIRE_CUE", cue: "halfway" });
@@ -213,12 +210,29 @@ export function useRunner(
     state.stepIndex,
     state.steps,
     state.cuesFiredForStep.halfway,
-    state.cuesFiredForStep.tenSec,
     cueSettings?.cue_halfway,
-    cueSettings?.cue_10s,
     workout.cue_halfway,
-    workout.cue_10s,
   ]);
+
+  // Countdown beeps for last 5 seconds of each step (exercise or rest).
+  useEffect(() => {
+    if (state.status !== "running") return;
+    const step = state.steps[state.stepIndex];
+    if (!step || step.mode !== "time") return;
+    if (step.kind === "prepare") return; // Skip prepare countdown
+
+    const remSec = Math.ceil(state.remainingMs / 1000);
+    
+    // Beep at 5, 4, 3, 2, 1 seconds remaining
+    if (remSec >= 1 && remSec <= 5 && !state.beepsFiredForStep.has(remSec)) {
+      if (!mutedRef.current) {
+        // Higher pitch for the final beep (1 second)
+        const freq = remSec === 1 ? 1200 : 880;
+        beep(freq, 100, 0.3);
+      }
+      dispatch({ type: "FIRE_BEEP", sec: remSec });
+    }
+  }, [state.remainingMs, state.status, state.stepIndex, state.steps, state.beepsFiredForStep]);
 
   // Stop speech when the workout finishes.
   useEffect(() => {
@@ -228,6 +242,7 @@ export function useRunner(
   // Public API
   const start = useCallback(() => {
     warmUpSpeech();
+    warmUpAudio();
     dispatch({ type: "START", now: Date.now() });
   }, []);
   const pause = useCallback(() => dispatch({ type: "PAUSE" }), []);
